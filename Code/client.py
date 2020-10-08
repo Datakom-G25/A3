@@ -1,25 +1,28 @@
+from time import sleep
+from random import randint
 from socket import *
 
-def read_one_line(client_socket):
-    newline_received = False
-    message = ""
-    while not newline_received:
-        character = client_socket.recv(1).decode()
-        if (character == "\n"):
-            newline_received = True
-        elif character == "\r":
-            pass
-        else:
-            message += character
-    return message
+messages = ["Datakomm", "Hello from TCP", "Chuck is here", "xxx", "Deano", ""]
+
+
+def choose_random_message():
+    i = randint(0, len(messages)-1)
+    return messages[i]
 
 
 def start_client():
     client_socket = socket(AF_INET, SOCK_STREAM)
     client_socket.connect(("localhost", 5678))
-    command_to_send = "GET / HTTP/1.0/\n"
-    cmd_as_bytes = command_to_send.encode()
-    client_socket.send(cmd_as_bytes)
+    need_to_run = True
+    while need_to_run:
+        command_to_send = choose_random_message()
+        command_to_send += "\n"
+        client_socket.send(command_to_send.encode())
+        server_response = client_socket.recv(100).decode()
+        sleep(1)
+        print("Servers response: ", server_response)
+        if server_response == "":
+            need_to_run = False
 
     client_socket.close()
 
@@ -33,4 +36,3 @@ def process_response(server_response):
 if __name__ == "__main__":
     start_client()
 
-#WE MADE IT TO 6 MINUTES INTO PST5 CREATING A TCP SERVER
