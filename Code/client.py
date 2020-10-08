@@ -17,9 +17,11 @@ def read_one_line(client_socket):
 def start_client():
     client_socket = socket(AF_INET, SOCK_STREAM)
     client_socket.connect(("localhost", 5678))
-    command_to_send = "GET / HTTP/1.0/\n"
+    command_to_send = input("message to send: ")
     cmd_as_bytes = command_to_send.encode()
     client_socket.send(cmd_as_bytes)
+    server_response = client_socket.recv(100).decode()
+    print("Servers response: ",server_response)
 
     client_socket.close()
 
