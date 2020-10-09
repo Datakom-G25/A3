@@ -4,7 +4,6 @@
 
 from socket import *
 
-
 # --------------------
 # Constants
 # --------------------
@@ -21,47 +20,25 @@ SERVER_HOST = "datakomm.work"  # Set this to either hostname (domain) or IP addr
 # State variables
 # --------------------
 current_state = "disconnected"  # The current state of the system
-# When this variable will be set to false, the application will stop
-must_run = True
-# Use this variable to create socket connection to the chat server
-# Note: the "type: socket" is a hint to PyCharm about the type of values we will assign to the variable
-client_socket = None  # type: socket
+
+must_run = True  # When this variable will be set to false, the application will stop
+
+client_socket = None
 
 
 def quit_application():
-    """ Update the application state so that the main-loop will exit """
-    # Make sure we reference the global variable here. Not the best code style,
-    # but the easiest to work with without involving object-oriented code
     global must_run
     must_run = False
 
 
 def send_command(command, arguments):
-    """
-    Send one command to the chat server.
-    :param command: The command to send (login, sync, msg, ...(
-    :param arguments: The arguments for the command as a string, or None if no arguments are needed
-        (username, message text, etc)
-    :return:
-    """
     global client_socket
-
-    # TODO: Implement this (part of step 3)
-    #if command == "sync":
-    #    client_socket.send(command)
-    #    client_socket.send("\n")
-
-        # Hint: concatenate the command and the arguments
-    # Hint: remember to send the newline at the end
-    pass
+    request_to_send = command + " " + arguments + "\n"
+    client_socket.send(request_to_send.encode())
+    print(get_servers_response())
 
 
 def read_one_line(sock):
-    """
-    Read one line of text from a socket
-    :param sock: The socket to read from.
-    :return:
-    """
     newline_received = False
     message = ""
     while not newline_received:
@@ -76,109 +53,63 @@ def read_one_line(sock):
 
 
 def get_servers_response():
-    """
-    Wait until a response command is received from the server
-    :return: The response of the server, the whole line as a single string
-    """
-    # TODO Step 4: implement this function
     global client_socket
-    #erver_response = client_socket.recv(1000).decode()
     server_response = read_one_line(client_socket)
     return server_response
 
 
-
 def connect_to_server():
-    # Must have these two lines, otherwise the function will not "see" the global variables that we will change here
-    global client_socket
-    global current_state
+    global client_socket, current_state
 
-    # TODO Step 1: implement connection establishment
-    # Hint: create a socket, connect, handle exceptions, then change current_state accordingly
     client_socket = socket(AF_INET, SOCK_STREAM)
-    client_socket.connect((SERVER_HOST,TCP_PORT))
+    client_socket.connect((SERVER_HOST, TCP_PORT))
     current_state = "connected"
-    # TODO Step 3: switch to sync mode
-    #send_command("sync",0)
 
-    client_socket.send(("sync\n").encode())
-    server_response = get_servers_response()
-    if server_response == "modeok":
-        pass
-    else:
-        print(server_response)
-    # Hint: send the sync command according to the protocol
-    # Hint: create function send_command(command, arguments) which you will use to send this and all other commands
-    # to the server
-
-    # TODO Step 4: wait for the servers response and find out whether the switch to SYNC mode was successful
-
-
-    # Hint: implement the get_servers_response function first - it should wait for one response command from the server
-    # and return the server's response (we expect "modeok" response here). This get_servers_response() function
-    # will come in handy later as well - when we will want to check the server's response to login, messages etc
-    #print("CONNECTION NOT IMPLEMENTED!")
+    send_command("sync", "")
 
 
 def disconnect_from_server():
-
-    global client_socket
-    global current_state
+    global client_socket, current_state
     client_socket.close()
     current_state = "disconnected"
     pass
 
+
 def loginauth():
     global client_socket, current_state
-    username = input("Gimme username: ")
-    client_socket.send(("login %s\n" % username).encode())
-    server_response = get_servers_response()
-    if server_response == "loginok":
-        current_state = "authorized"
-    else:
-        print("failed to login")
-        current_state = "connected"
-    print(server_response)
+    current_state = "authorized"
+    username = input("Username:")
+    send_command("login", username)
 
-def send_msg(): #DIS WILL MIGHT NEED TO IMPLEMENT INTO SEND MESSAGE ACTUAL THING
+
+def send_msg():
     global client_socket
     msg = input("Gimme the msg u wanna send: ")
-    msg_formatted = "msg " + msg + "\n"
-    client_socket.send(msg_formatted.encode())
-    print(get_servers_response())
+    send_command("msg", msg)
 
-def send_pmsg(): #DIS WILL MIGHT NEED TO IMPLEMENT INTO SEND MESSAGE ACTUAL THING
+
+def send_pmsg():
     global client_socket
     msg = input("Gimme the msg u wanna send: ")
     recipient = input("Who u wanna send to?: ")
-    msg_formatted = "privmsg " + recipient +" " + msg + "\n"
-    client_socket.send(msg_formatted.encode())
-    print(get_servers_response())
+    send_command("privmsg", recipient + " " + msg)
+
 
 def get_inbox():
     global client_socket
-    client_socket.send(("inbox\n").encode())
-    print(get_servers_response())
+    send_command("inbox", "")
+
 
 def get_user_list():
     global client_socket
-    client_socket.send(("users\n").encode())
-    print(get_servers_response())
+    send_command("users", "")
+
 
 def get_joke():
     global client_socket
-    client_socket.send(("joke\n").encode())
-    print(get_servers_response())
+    send_command("joke", "")
 
 
-"""
-The list of available actions that the user can perform
-Each action is a dictionary with the following fields:
-description: a textual description of the action
-valid_states: a list specifying in which states this action is available
-function: a function to call when the user chooses this particular action. The functions must be defined before
-            the definition of this variable
-"""
 available_actions = [
     {
         "description": "Connect to a chat server",
@@ -194,37 +125,16 @@ available_actions = [
         "description": "Authorize (log in)",
         "valid_states": ["connected", "authorized"],
         "function": loginauth
-        # TODO Step 5 - implement login
-
-
-
-        # Hint: you will probably want to create a new function (call it login(), or authorize()) and
-        # reference that function here.
-        # Hint: you can ask the user to enter the username with input("Enter username: ") function.
-        # Hint: the login function must be above this line, otherwise the available_actions will complain that it can't
-        # find the function
-        # Hint: you can reuse the send_command() function to send the "login" command
-        # Hint: you probably want to change the state of the system: update value of current_state variable
-        # Hint: remember to tell the function that you will want to use the global variable "current_state".
-        # Hint: if the login was unsuccessful (loginerr returned), show the error message to the user
-
     },
+
     {
         "description": "Send a public message",
         "valid_states": ["connected", "authorized"],
-        # TODO Step 6 - implement sending a public message
-        # Hint: ask the user to input the message from the keyboard
-        # Hint: you can reuse the send_command() function to send the "msg" command
-        # Hint: remember to read the server's response: whether the message was successfully sent or not
         "function": send_msg
     },
     {
         "description": "Send a private message",
         "valid_states": ["authorized"],
-        # TODO Step 8 - implement sending a private message
-        # Hint: ask the user to input the recipient and message from the keyboard
-        # Hint: you can reuse the send_command() function to send the "privmsg" command
-        # Hint: remember to read the server's response: whether the message was successfully sent or not
         "function": send_pmsg
     },
     {
@@ -239,18 +149,11 @@ available_actions = [
     {
         "description": "See list of users",
         "valid_states": ["connected", "authorized"],
-        # TODO Step 7 - Implement getting the list of currently connected users
-        # Hint: use the provided chat client tools and analyze traffic with Wireshark to find out how
-        # the user list is reported. Then implement a function which gets the user list from the server
-        # and prints the list of usernames
         "function": get_user_list
     },
     {
         "description": "Get a joke",
         "valid_states": ["connected", "authorized"],
-        # TODO - optional step - implement the joke fetching from the server.
-        # Hint: this part is not described in the protocol. But the command is simple. Try to find
-        # out how it works ;)
         "function": get_joke
     },
     {
@@ -262,7 +165,6 @@ available_actions = [
 
 
 def run_chat_client():
-    """ Run the chat client application loop. When this function exists, the application will stop """
     connect_to_server()
     while must_run:
         print_menu()
@@ -287,10 +189,6 @@ def print_menu():
 
 
 def select_user_action():
-    """
-    Ask the user to choose and action by entering the index of the action
-    :return: The action as an index in available_actions array or None if the input was invalid
-    """
     number_of_actions = len(available_actions)
     hint = "Enter the number of your choice (1..%i):" % number_of_actions
     choice = input(hint)
@@ -309,11 +207,6 @@ def select_user_action():
 
 
 def perform_user_action(action_index):
-    """
-    Perform the desired user action
-    :param action_index: The index in available_actions array - the action to take
-    :return: Desired state change as a string, None if no state change is needed
-    """
     if action_index is not None:
         print()
         action = available_actions[action_index]
@@ -330,7 +223,7 @@ def perform_user_action(action_index):
     print()
     return None
 
-# Entrypoint for the application. In PyCharm you should see a green arrow on the left side.
-# By clicking it you run the application.
+
+# Entrypoint for the application.
 if __name__ == '__main__':
     run_chat_client()
