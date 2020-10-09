@@ -81,15 +81,14 @@ def get_servers_response():
     :return: The response of the server, the whole line as a single string
     """
     # TODO Step 4: implement this function
-    # Hint: reuse read_one_line (copied from the tutorial-code)
     global client_socket
-    #server_response = client_socket.recv(1000).decode()
+    #erver_response = client_socket.recv(1000).decode()
     server_response = read_one_line(client_socket)
     return server_response
 
 
 
-def connect_to_server(host,port):
+def connect_to_server():
     # Must have these two lines, otherwise the function will not "see" the global variables that we will change here
     global client_socket
     global current_state
@@ -97,19 +96,23 @@ def connect_to_server(host,port):
     # TODO Step 1: implement connection establishment
     # Hint: create a socket, connect, handle exceptions, then change current_state accordingly
     client_socket = socket(AF_INET, SOCK_STREAM)
-    client_socket.connect((host,port))
+    client_socket.connect((SERVER_HOST,TCP_PORT))
     current_state = "connected"
     # TODO Step 3: switch to sync mode
     #send_command("sync",0)
 
     client_socket.send(("sync\n").encode())
-
+    server_response = get_servers_response()
+    if server_response == "modeok":
+        pass
+    else:
+        print(server_response)
     # Hint: send the sync command according to the protocol
     # Hint: create function send_command(command, arguments) which you will use to send this and all other commands
     # to the server
 
     # TODO Step 4: wait for the servers response and find out whether the switch to SYNC mode was successful
-    print(get_servers_response())
+
 
     # Hint: implement the get_servers_response function first - it should wait for one response command from the server
     # and return the server's response (we expect "modeok" response here). This get_servers_response() function
@@ -129,9 +132,44 @@ def loginauth():
     global client_socket, current_state
     username = input("Gimme username: ")
     client_socket.send(("login %s\n" % username).encode())
-    current_state = "authorized"
+    server_response = get_servers_response()
+    if server_response == "loginok":
+        current_state = "authorized"
+    else:
+        print("failed to login")
+        current_state = "connected"
+    print(server_response)
 
-    pass
+def send_msg(): #DIS WILL MIGHT NEED TO IMPLEMENT INTO SEND MESSAGE ACTUAL THING
+    global client_socket
+    msg = input("Gimme the msg u wanna send: ")
+    msg_formatted = "msg " + msg + "\n"
+    client_socket.send(msg_formatted.encode())
+    print(get_servers_response())
+
+def send_pmsg(): #DIS WILL MIGHT NEED TO IMPLEMENT INTO SEND MESSAGE ACTUAL THING
+    global client_socket
+    msg = input("Gimme the msg u wanna send: ")
+    recipient = input("Who u wanna send to?: ")
+    msg_formatted = "privmsg " + recipient +" " + msg + "\n"
+    client_socket.send(msg_formatted.encode())
+    print(get_servers_response())
+
+def get_inbox():
+    global client_socket
+    client_socket.send(("inbox\n").encode())
+    print(get_servers_response())
+
+def get_user_list():
+    global client_socket
+    client_socket.send(("users\n").encode())
+    print(get_servers_response())
+
+def get_joke():
+    global client_socket
+    client_socket.send(("joke\n").encode())
+    print(get_servers_response())
+
 
 """
 The list of available actions that the user can perform
@@ -178,7 +216,7 @@ available_actions = [
         # Hint: ask the user to input the message from the keyboard
         # Hint: you can reuse the send_command() function to send the "msg" command
         # Hint: remember to read the server's response: whether the message was successfully sent or not
-        "function": None
+        "function": send_msg
     },
     {
         "description": "Send a private message",
@@ -187,7 +225,7 @@ available_actions = [
         # Hint: ask the user to input the recipient and message from the keyboard
         # Hint: you can reuse the send_command() function to send the "privmsg" command
         # Hint: remember to read the server's response: whether the message was successfully sent or not
-        "function": None
+        "function": send_pmsg
     },
     {
         "description": "Read messages in the inbox",
@@ -196,7 +234,7 @@ available_actions = [
         # Hint: send the inbox command, find out how many messages there are. Then parse messages
         # one by one: find if it is a private or public message, who is the sender. Print this
         # information in a user friendly way
-        "function": None
+        "function": get_inbox
     },
     {
         "description": "See list of users",
@@ -205,7 +243,7 @@ available_actions = [
         # Hint: use the provided chat client tools and analyze traffic with Wireshark to find out how
         # the user list is reported. Then implement a function which gets the user list from the server
         # and prints the list of usernames
-        "function": None
+        "function": get_user_list
     },
     {
         "description": "Get a joke",
@@ -213,7 +251,7 @@ available_actions = [
         # TODO - optional step - implement the joke fetching from the server.
         # Hint: this part is not described in the protocol. But the command is simple. Try to find
         # out how it works ;)
-        "function": None
+        "function": get_joke
     },
     {
         "description": "Quit the application",
@@ -225,7 +263,7 @@ available_actions = [
 
 def run_chat_client():
     """ Run the chat client application loop. When this function exists, the application will stop """
-    connect_to_server(SERVER_HOST, TCP_PORT)
+    connect_to_server()
     while must_run:
         print_menu()
         action = select_user_action()
