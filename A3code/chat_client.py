@@ -32,10 +32,14 @@ def quit_application():
 
 
 def send_command(command, arguments):
-    global client_socket
-    request_to_send = command + " " + arguments + "\n"
-    client_socket.send(request_to_send.encode())
-    print(get_servers_response())
+    try:
+        global client_socket
+        request_to_send = command + " " + arguments + "\n"
+        client_socket.send(request_to_send.encode())
+        return True
+    except IOError as e:
+        print("Error happened: ", e)
+        return False
 
 
 def read_one_line(sock):
@@ -55,6 +59,7 @@ def read_one_line(sock):
 def get_servers_response():
     global client_socket
     server_response = read_one_line(client_socket)
+    print(server_response)
     return server_response
 
 
@@ -66,6 +71,7 @@ def connect_to_server():
     current_state = "connected"
 
     send_command("sync", "")
+    get_servers_response()
 
 
 def disconnect_from_server():
@@ -80,12 +86,14 @@ def loginauth():
     current_state = "authorized"
     username = input("Username:")
     send_command("login", username)
+    get_servers_response()
 
 
 def send_msg():
     global client_socket
     msg = input("Gimme the msg u wanna send: ")
     send_command("msg", msg)
+    get_servers_response()
 
 
 def send_pmsg():
@@ -93,21 +101,34 @@ def send_pmsg():
     msg = input("Gimme the msg u wanna send: ")
     recipient = input("Who u wanna send to?: ")
     send_command("privmsg", recipient + " " + msg)
+    get_servers_response()
 
 
 def get_inbox():
-    global client_socket
-    send_command("inbox", "")
+    try:
+        send_command("inbox", "")
+        response = get_servers_response()
+        num_msg = int(response[6:])
+        i = 1
+        while i <= num_msg:
+            get_servers_response()
+            i += 1
+        return True
+    except IOError as e:
+        print("Error happened: ", e)
+        return False
 
 
 def get_user_list():
     global client_socket
     send_command("users", "")
+    get_servers_response()
 
 
 def get_joke():
     global client_socket
     send_command("joke", "")
+    get_servers_response()
 
 
 available_actions = [
@@ -165,12 +186,15 @@ available_actions = [
 
 
 def run_chat_client():
-    connect_to_server()
-    while must_run:
-        print_menu()
-        action = select_user_action()
-        perform_user_action(action)
-    print("Thanks for watching. Like and subscribe! 👍")
+    try:
+        while must_run:
+            print_menu()
+            action = select_user_action()
+            perform_user_action(action)
+        print("Thanks for watching. Like and subscribe! 👍")
+    except IOError as e:
+        print("Error happened: ", e)
+        return False
 
 
 def print_menu():
