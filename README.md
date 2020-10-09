@@ -1,4 +1,4 @@
-# A3
-A3 repo
-Michael
-Hei
+# This is Group 25's repository for Assignment No. 3
+
+########This repo contains:#############
+#######TODO LIST CONTAINING SHTUFF##########
